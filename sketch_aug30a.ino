@@ -8,8 +8,10 @@
 
 
 //set pins
-const int swOpen = 14;
-const int motorPWM = 10;
+const byte swOpen = 14;
+const byte motorPWM = 10;
+const byte speaker = 6;
+const byte LCDlight = 13;
 
 
 //set button
@@ -47,14 +49,20 @@ byte pointer = 0;
 boolean changePswd = false;
 
 
+//time var
+unsigned long time0;
+
+
 void setup() {
 //  Serial.begin(9600);
   
   //set pins
-  pinMode(6,OUTPUT);
-  digitalWrite(6,LOW);
-  pinMode(14,INPUT);
-  digitalWrite(14,HIGH);
+  pinMode(speaker,OUTPUT);
+  digitalWrite(speaker,HIGH);
+  pinMode(swOpen,INPUT);
+  digitalWrite(swOpen,HIGH);
+  pinMode(LCDlight,OUTPUT);
+  digitalWrite(LCDlight,HIGH);
 
   //startup LCD
   lcd.clear();
@@ -76,16 +84,23 @@ void setup() {
 }
 
 void LCDenter() {
+  digitalWrite(LCDlight,HIGH);
   lcd.clear();
   lcd.setCursor(0,0);
   lcd.print("Enter Password:");
 }
 
 void loop() {
+
   //to refresh button statue
   btn.tick();
   //open door by button inside
   btn.attachClick(openDoor);
+  
+  if(millis() - time0 > 5000){
+    //turn off LCD backlight in idle
+    digitalWrite(LCDlight,LOW);
+  }
   
   // enter password from keypad
   char key = keypad.getKey();
@@ -93,6 +108,12 @@ void loop() {
   lcd.setCursor(pointer,1);
   
   if (key){
+    //turn on LCD backlight when anykey is pressed
+    time0 = millis();
+    digitalWrite(LCDlight,HIGH);
+
+    tone(speaker,1000,5);
+    
 //    Serial.println(key);
     if(key == '#') {
       changePswd = !changePswd;
@@ -102,12 +123,18 @@ void loop() {
       }else {
         lcd.print(" ");
       }
-      tone(6,2000,50);
+      tone(speaker,2000,50);
+    }
+    if(key == '*') {
+      if(pointer > 0) {
+        pointer--;
+        lcd.setCursor(pointer,1);
+        lcd.print(" ");
+      }
     }
     if(key != '*' && key != '#'){
       input[pointer] = key-48;
       lcd.print("*");
-      tone(6,1000,5);
       pointer++;
     }
     
@@ -125,11 +152,11 @@ void loop() {
           lcd.clear();
           lcd.setCursor(0,0);
           lcd.print("Wrong Password!");
-          tone(6,1500,400);
+          tone(speaker,1500,400);
           delay(400);
-          tone(6,1500,400);
+          tone(speaker,1500,400);
           delay(400);
-          tone(6,1500,400);
+          tone(speaker,1500,400);
           delay(1000);
           LCDenter();
           break;
@@ -138,9 +165,9 @@ void loop() {
 
         if(i == 3) {
 //          Serial.println("correct!");
-//          tone(6,1000,250);
+//          tone(speaker,1000,250);
 //          delay(250);
-//          tone(6,1500,250);
+//          tone(speaker,1500,250);
 //          delay(250);
           if(changePswd) {
 //            Serial.println("change!");
@@ -160,33 +187,31 @@ void loop() {
 
 void changePassword() {
   changePswd = false;
-  int cycle = 0;
+  time0= millis();
 
   lcd.clear();
   lcd.setCursor(0,0);
-  lcd.print("Press#to Change.");
+  lcd.print("# to Change Pswd");
   lcd.setCursor(0,1);
-  lcd.print("Others to Quit.");
+  lcd.print("OtherKey to Quit");
   
-  tone(6,1000,100);
+  tone(speaker,1000,100);
   delay(100);
-  tone(6,1000,100);
+  tone(speaker,1000,100);
   delay(100);
   
   while(true){
     char key = keypad.getKey();
     delay(10);
-    cycle++;
     
     if(key == '#') {
-      tone(6,2000,50);
+      tone(speaker,2000,50);
       initialize();
       break;
     }else if(key != 0){
       LCDenter();
       break;
-    }else if(cycle == 1000){
-      LCDenter();
+    }else if(mills() - time0 > 5000){
       break;
     }
   }
@@ -198,9 +223,9 @@ void initialize() {
   lcd.print("Set Password:");
   lcd.setCursor(pointer,1);
   
-  tone(6,2000,250); 
+  tone(speaker,2000,250); 
   delay(250);
-  tone(6,1000,250);
+  tone(speaker,1000,250);
   delay(255);
   
   while(true){
@@ -212,17 +237,24 @@ void initialize() {
       lcd.print("*");
 //      Serial.println(key);
       delay(10);
-      tone(6,1500,5);
+      tone(speaker,1500,5);
       pointer++;
+    }
+    if(key == '*') {
+      if(pointer > 0) {
+        pointer--;
+        lcd.setCursor(pointer,1);
+        lcd.print(" ");
+      }
     }
     
     if(pointer == 4){
       pointer = 0;
-      tone(6,1000,250); 
+      tone(speaker,1000,250); 
       delay(250);
-      tone(6,1500,250);
+      tone(speaker,1500,250);
       delay(250);
-      tone(6,2000,250);
+      tone(speaker,2000,250);
       break;
     }
   }
@@ -234,10 +266,14 @@ void initialize() {
 }
 
 static void openDoor(){
-  motor(2,45);
-  delay(5000);
-  motor(1,45);
+  lcd.clear();
+  lcd.setCursor(4,0);
+  lcd.print("Welcome!");
+  motor(2,450);
+  delay(6500);
+  motor(1,260);
   delay(10);
+  LCDenter();
 }
 
 void motor(int dir, int cycle){
