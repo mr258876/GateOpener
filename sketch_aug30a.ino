@@ -211,7 +211,7 @@ void changePassword() {
     }else if(key != 0){
       LCDenter();
       break;
-    }else if(mills() - time0 > 5000){
+    }else if(millis() - time0 > 5000){
       break;
     }
   }
